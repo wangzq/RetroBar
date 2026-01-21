@@ -41,6 +41,11 @@
     <s:String x:Key="lock_taskbar">Görev _çubuğunu kilitle</s:String>
     <s:String x:Key="multiple_displays">Birden çok ekran</s:String>
     <s:String x:Key="show_tasks_on">Görev _düğmelerini şurada göster:</s:String>
+    <s:String x:Key="single_taskbar_monitor">Single taskbar _monitor:</s:String>
+    <s:String x:Key="reset_to_primary">_Reset</s:String>
+    <s:String x:Key="primary_display">Primary</s:String>
+    <s:String x:Key="display">Display</s:String>
+    <s:String x:Key="primary">Primary</s:String>
     <x:Array x:Key="show_tasks_on_values" Type="s:String">
         <s:String>Tüm görev çubukları</s:String>
         <s:String>Pencerenin açıldığı görev çubuğu</s:String>

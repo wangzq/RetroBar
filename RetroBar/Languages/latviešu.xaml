@@ -34,6 +34,11 @@
     <s:String x:Key="enable_auto_hide">A_utomātiski paslēpt uzdevumjoslu</s:String>
     <s:String x:Key="multiple_displays">Vairāki displeji</s:String>
     <s:String x:Key="show_tasks_on">R_ādīt uzdevumus ieslēgts:</s:String>
+    <s:String x:Key="single_taskbar_monitor">Single taskbar _monitor:</s:String>
+    <s:String x:Key="reset_to_primary">_Reset</s:String>
+    <s:String x:Key="primary_display">Primary</s:String>
+    <s:String x:Key="display">Display</s:String>
+    <s:String x:Key="primary">Primary</s:String>
     <x:Array x:Key="show_tasks_on_values" Type="s:String">
         <s:String>Visas uzdevumjoslas</s:String>
         <s:String>Tāda pati uzdevumjosla kā logs</s:String>

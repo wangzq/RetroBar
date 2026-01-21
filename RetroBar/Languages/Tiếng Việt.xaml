@@ -41,6 +41,11 @@
     <s:String x:Key="lock_taskbar">_Khoá thanh tác vụ</s:String>
     <s:String x:Key="multiple_displays">Đa màn hình</s:String>
     <s:String x:Key="show_tasks_on">_Hiện các tác vụ trên:</s:String>
+    <s:String x:Key="single_taskbar_monitor">Single taskbar _monitor:</s:String>
+    <s:String x:Key="reset_to_primary">_Reset</s:String>
+    <s:String x:Key="primary_display">Primary</s:String>
+    <s:String x:Key="display">Display</s:String>
+    <s:String x:Key="primary">Primary</s:String>
     <x:Array x:Key="show_tasks_on_values" Type="s:String">
         <s:String>Tất cả các thanh tác vụ</s:String>
         <s:String>Thanh tác vụ cùng cửa sổ</s:String>

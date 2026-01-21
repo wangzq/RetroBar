@@ -41,6 +41,11 @@
     <s:String x:Key="lock_taskbar">_Iblokka l-bar tal-kompiti</s:String>
     <s:String x:Key="multiple_displays">Wiri multipli</s:String>
     <s:String x:Key="show_tasks_on">Uri l-kompiti fuq:</s:String>
+    <s:String x:Key="single_taskbar_monitor">Single taskbar _monitor:</s:String>
+    <s:String x:Key="reset_to_primary">_Reset</s:String>
+    <s:String x:Key="primary_display">Primary</s:String>
+    <s:String x:Key="display">Display</s:String>
+    <s:String x:Key="primary">Primary</s:String>
     <x:Array x:Key="show_tasks_on_values" Type="s:String">
         <s:String>Il-barijiet tax-xogħol kollha</s:String>
         <s:String>L-istess taskbar bħall-tieqa</s:String>

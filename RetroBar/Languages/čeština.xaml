@@ -68,4 +68,10 @@
     <s:String x:Key="hide">Skrýt</s:String>
 
     <s:String x:Key="open_folder">&amp;Otevřít Složku</s:String>
+    <s:String x:Key="single_taskbar_monitor">Single taskbar _monitor:</s:String>
+    <s:String x:Key="reset_to_primary">_Reset</s:String>
+    <s:String x:Key="primary_display">Primary</s:String>
+    <s:String x:Key="display">Display</s:String>
+    <s:String x:Key="primary">Primary</s:String>
+
 </ResourceDictionary>

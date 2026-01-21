@@ -62,4 +62,10 @@
 
     <FlowDirection x:Key="flow_direction">RightToLeft</FlowDirection>
     <FontFamily x:Key="start_text_xp_font_family">Tahoma</FontFamily>
+    <s:String x:Key="single_taskbar_monitor">Single taskbar _monitor:</s:String>
+    <s:String x:Key="reset_to_primary">_Reset</s:String>
+    <s:String x:Key="primary_display">Primary</s:String>
+    <s:String x:Key="display">Display</s:String>
+    <s:String x:Key="primary">Primary</s:String>
+
 </ResourceDictionary>

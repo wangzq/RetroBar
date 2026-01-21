@@ -36,6 +36,11 @@
     <s:String x:Key="lock_taskbar">_Spär d'Taskbar</s:String>
     <s:String x:Key="multiple_displays">Multiple Affichage</s:String>
     <s:String x:Key="show_tasks_on">Show Programm op:</s:String>
+    <s:String x:Key="single_taskbar_monitor">Single taskbar _monitor:</s:String>
+    <s:String x:Key="reset_to_primary">_Reset</s:String>
+    <s:String x:Key="primary_display">Primary</s:String>
+    <s:String x:Key="display">Display</s:String>
+    <s:String x:Key="primary">Primary</s:String>
     <x:Array x:Key="show_tasks_on_values" Type="s:String">
         <s:String>All taskbars</s:String>
         <s:String>Selwecht Taskbar wéi Fënster</s:String>

@@ -35,6 +35,11 @@
     <s:String x:Key="lock_taskbar">_Blokeatu ataza barra</s:String>
     <s:String x:Key="multiple_displays">Hainbat pantaila</s:String>
     <s:String x:Key="show_tasks_on">Erakutsi _atazak hemen:</s:String>
+    <s:String x:Key="single_taskbar_monitor">Single taskbar _monitor:</s:String>
+    <s:String x:Key="reset_to_primary">_Reset</s:String>
+    <s:String x:Key="primary_display">Primary</s:String>
+    <s:String x:Key="display">Display</s:String>
+    <s:String x:Key="primary">Primary</s:String>
     <x:Array x:Key="show_tasks_on_values" Type="s:String">
         <s:String>Ataza barra guztietan</s:String>
         <s:String>Leihoaren ataza barra berdinean</s:String>

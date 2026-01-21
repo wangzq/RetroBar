@@ -36,6 +36,11 @@
     <s:String x:Key="lock_taskbar">Za_ključaj traku zadataka</s:String>
     <s:String x:Key="multiple_displays">Više ekrana</s:String>
     <s:String x:Key="show_tasks_on">Prika_ži prozore na:</s:String>
+    <s:String x:Key="single_taskbar_monitor">Single taskbar _monitor:</s:String>
+    <s:String x:Key="reset_to_primary">_Reset</s:String>
+    <s:String x:Key="primary_display">Primary</s:String>
+    <s:String x:Key="display">Display</s:String>
+    <s:String x:Key="primary">Primary</s:String>
     <x:Array x:Key="show_tasks_on_values" Type="s:String">
         <s:String>Svim trakama zadataka</s:String>
         <s:String>Traci zadataka na kojoj je prozor</s:String>

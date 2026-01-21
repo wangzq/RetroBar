@@ -41,6 +41,11 @@
     <s:String x:Key="lock_taskbar">锁定任务栏(_L)</s:String>
     <s:String x:Key="multiple_displays">多种显示</s:String>
     <s:String x:Key="show_tasks_on">显示任务在(_H): </s:String>
+    <s:String x:Key="single_taskbar_monitor">Single taskbar _monitor:</s:String>
+    <s:String x:Key="reset_to_primary">_Reset</s:String>
+    <s:String x:Key="primary_display">Primary</s:String>
+    <s:String x:Key="display">Display</s:String>
+    <s:String x:Key="primary">Primary</s:String>
     <x:Array x:Key="show_tasks_on_values" Type="s:String">
         <s:String>所有任务栏</s:String>
         <s:String>与窗口的任务栏相同</s:String>
