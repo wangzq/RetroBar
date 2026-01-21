@@ -87,6 +87,7 @@ namespace RetroBar
             LoadWidth();
             LoadVersion();
             LoadClockActions();
+            LoadSingleMonitorTargets();
 
             Settings.Instance.PropertyChanged += Settings_PropertyChanged;
         }
@@ -107,6 +108,105 @@ namespace RetroBar
                 LoadVersion();
                 LoadClockActions();
             }
+            else if (e.PropertyName == nameof(Settings.ShowMultiMon))
+            {
+                LoadSingleMonitorTargets();
+            }
+            else if (e.PropertyName == nameof(Settings.TaskbarMonitorDeviceName))
+            {
+                LoadSingleMonitorTargetsSelection();
+            }
+        }
+
+        private sealed class DisplayDeviceItem
+        {
+            public string DeviceName { get; }
+            public string Label { get; }
+
+            public DisplayDeviceItem(string deviceName, string label)
+            {
+                DeviceName = deviceName;
+                Label = label;
+            }
+
+            public override string ToString() => Label;
+        }
+
+        private void LoadSingleMonitorTargets()
+        {
+            // Only show a meaningful list when we're in single-taskbar mode.
+            if (cboSingleMonitor == null)
+            {
+                return;
+            }
+
+            cboSingleMonitor.Items.Clear();
+
+            // Always include an explicit "Primary" option.
+            cboSingleMonitor.Items.Add(new DisplayDeviceItem(null, TryGetStringResource("primary_display", "Primary")));
+
+            // Add each screen (device names look like \\.\DISPLAY1 - stable enough for persisted selection).
+            var screens = Screen.AllScreens;
+            for (int i = 0; i < screens.Length; i++)
+            {
+                var s = screens[i];
+                string displayPrefix = TryGetStringResource("display", "Display");
+                string primarySuffix = s.Primary ? $" ({TryGetStringResource("primary", "Primary")})" : "";
+                string label = $"{displayPrefix} {i + 1}{primarySuffix} - {s.DeviceName}";
+                cboSingleMonitor.Items.Add(new DisplayDeviceItem(s.DeviceName, label));
+            }
+
+            LoadSingleMonitorTargetsSelection();
+        }
+
+        private void LoadSingleMonitorTargetsSelection()
+        {
+            if (cboSingleMonitor == null || cboSingleMonitor.Items.Count == 0)
+            {
+                return;
+            }
+
+            string desired = Settings.Instance.TaskbarMonitorDeviceName;
+            DisplayDeviceItem best = null;
+
+            foreach (var item in cboSingleMonitor.Items)
+            {
+                if (item is DisplayDeviceItem ddi)
+                {
+                    if (string.IsNullOrWhiteSpace(desired) && ddi.DeviceName == null)
+                    {
+                        best = ddi;
+                        break;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(desired) &&
+                        string.Equals(ddi.DeviceName, desired, StringComparison.OrdinalIgnoreCase))
+                    {
+                        best = ddi;
+                        break;
+                    }
+                }
+            }
+
+            // Default to "Primary".
+            cboSingleMonitor.SelectedItem = best ?? cboSingleMonitor.Items[0];
+        }
+
+        private string TryGetStringResource(string key, string fallback)
+        {
+            try
+            {
+                if (TryFindResource(key) is string s && !string.IsNullOrWhiteSpace(s))
+                {
+                    return s;
+                }
+            }
+            catch
+            {
+                // ignore and fall back
+            }
+
+            return fallback;
         }
 
         public static PropertiesWindow Open(NotificationArea notificationArea, DictionaryManager dictionaryManager, AppBarScreen screen, double dpiScale, double barSize)
@@ -398,6 +498,27 @@ namespace RetroBar
             {
                 cboMultiMonMode.SelectedValue = cboMultiMonMode.Items[(int)Settings.Instance.MultiMonMode];
             }
+        }
+
+        private void CboSingleMonitor_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+        {
+            if (cboSingleMonitor.SelectedItem == null)
+            {
+                LoadSingleMonitorTargetsSelection();
+                return;
+            }
+
+            if (cboSingleMonitor.SelectedItem is DisplayDeviceItem ddi)
+            {
+                // Persist; WindowManager will reopen the taskbar when needed.
+                Settings.Instance.TaskbarMonitorDeviceName = ddi.DeviceName;
+            }
+        }
+
+        private void ResetSingleMonitor_OnClick(object sender, RoutedEventArgs e)
+        {
+            Settings.Instance.TaskbarMonitorDeviceName = null;
+            LoadSingleMonitorTargetsSelection();
         }
 
         private void CboInvertIconsMode_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)

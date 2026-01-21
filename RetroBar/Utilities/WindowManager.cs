@@ -55,6 +55,14 @@ namespace RetroBar.Utilities
 
                 ReopenTaskbars();
             }
+            else if (e.PropertyName == nameof(Settings.TaskbarMonitorDeviceName))
+            {
+                // Only relevant in single taskbar mode.
+                if (!Settings.Instance.ShowMultiMon)
+                {
+                    ReopenTaskbars();
+                }
+            }
         }
 
         public void ReopenTaskbars()
@@ -148,6 +156,20 @@ namespace RetroBar.Utilities
             }
             else
             {
+                // In single taskbar mode, prefer the user-selected monitor (if it exists), otherwise fall back to primary.
+                string desiredDevice = Settings.Instance.TaskbarMonitorDeviceName;
+                if (!string.IsNullOrWhiteSpace(desiredDevice))
+                {
+                    foreach (var screen in _screenState)
+                    {
+                        if (string.Equals(screen.DeviceName, desiredDevice, StringComparison.OrdinalIgnoreCase))
+                        {
+                            openTaskbar(screen);
+                            return;
+                        }
+                    }
+                }
+
                 openTaskbar(AppBarScreen.FromPrimaryScreen());
             }
         }

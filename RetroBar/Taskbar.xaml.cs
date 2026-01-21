@@ -682,9 +682,54 @@ namespace RetroBar
                 case NativeMethods.WM.RBUTTONDOWN:
                 case NativeMethods.WM.XBUTTONUP:
                 case NativeMethods.WM.XBUTTONDOWN:
+                    if (e.Message == NativeMethods.WM.LBUTTONUP)
+                    {
+                        // In single taskbar mode, allow dragging the taskbar to another monitor.
+                        // We intentionally re-create the taskbar window rather than moving it to ensure AppBar
+                        // registration is correct on the target display.
+                        TryMoveSingleTaskbarToCursorMonitor(e.HookStruct.pt.X, e.HookStruct.pt.Y);
+                    }
                     StopMouseDragHook();
                     break;
             }
+        }
+
+        private void TryMoveSingleTaskbarToCursorMonitor(int cursorX, int cursorY)
+        {
+            // Only for unlocked move-dragging (not resizing), and only when we are not in multi-monitor taskbar mode.
+            if (Settings.Instance.ShowMultiMon || _mouseDragResize)
+            {
+                return;
+            }
+
+            if (_mouseDragStart == null)
+            {
+                return;
+            }
+
+            // Require an actual drag motion.
+            if (Math.Abs(cursorX - _mouseDragStart.Value.X) <= SystemParameters.MinimumHorizontalDragDistance ||
+                Math.Abs(cursorY - _mouseDragStart.Value.Y) <= SystemParameters.MinimumVerticalDragDistance)
+            {
+                return;
+            }
+
+            // Determine the monitor under the cursor.
+            var target = System.Windows.Forms.Screen.FromPoint(new System.Drawing.Point(cursorX, cursorY));
+            if (target == null)
+            {
+                return;
+            }
+
+            // If already on that monitor, do nothing.
+            if (string.Equals(Screen?.DeviceName, target.DeviceName, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            // Persist and reopen.
+            Settings.Instance.TaskbarMonitorDeviceName = target.DeviceName;
+            windowManager.ReopenTaskbars();
         }
 
         private void StartMouseDragHook()

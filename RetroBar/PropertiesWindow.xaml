@@ -21,6 +21,7 @@
             <converters:BoolToTextRenderingModeConverter x:Key="textRenderingModeConverter" />
             <converters:BoolToVisibilityConverter x:Key="boolToVisibilityConverter" />
             <converters:BoolToInvertedVisibilityConverter x:Key="boolToInvertedVisibilityConverter" />
+            <converters:BoolToInvertedBoolConverter x:Key="boolToInvertedBoolConverter" />
             <converters:CountToIndexConverter x:Key="countToIndexConverter" />
             <converters:DoubleToPercentConverter x:Key="doubleToPercentConverter" />
             <converters:EnumConverter x:Key="enumConverter" />
@@ -442,6 +443,22 @@
                                           ItemsSource="{DynamicResource show_tasks_on_values}"
                                           SelectedIndex="{Binding Source={x:Static Settings:Settings.Instance}, Path=MultiMonMode, UpdateSourceTrigger=PropertyChanged, Converter={StaticResource enumConverter}}"
                                           SelectionChanged="CboMultiMonMode_SelectionChanged" />
+                            </DockPanel>
+
+                            <!-- Single taskbar placement (only applies when ShowMultiMon is false) -->
+                            <DockPanel Margin="0,6,0,0">
+                                <Label VerticalAlignment="Center"
+                                       Target="{Binding ElementName=cboSingleMonitor}">
+                                    <AccessText Text="{DynamicResource single_taskbar_monitor}" />
+                                </Label>
+                                <ComboBox x:Name="cboSingleMonitor"
+                                          MinWidth="160"
+                      IsEnabled="{Binding Source={x:Static Settings:Settings.Instance}, Path=ShowMultiMon, Converter={StaticResource boolToInvertedBoolConverter}}"
+                                          SelectionChanged="CboSingleMonitor_SelectionChanged" />
+                                <Button Margin="6,0,0,0"
+                    IsEnabled="{Binding Source={x:Static Settings:Settings.Instance}, Path=ShowMultiMon, Converter={StaticResource boolToInvertedBoolConverter}}"
+                    Content="{DynamicResource reset_to_primary}" 
+                                        Click="ResetSingleMonitor_OnClick" />
                             </DockPanel>
                         </StackPanel>
                     </GroupBox>

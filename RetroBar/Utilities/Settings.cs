@@ -57,7 +57,7 @@ namespace RetroBar.Utilities
 
         protected void Set<T>(ref T field, T value, [CallerMemberName] string propertyName = "")
         {
-            if (!field.Equals(value))
+            if (!EqualityComparer<T>.Default.Equals(field, value))
             {
                 field = value;
                 OnPropertyChanged(propertyName);
@@ -126,6 +126,18 @@ namespace RetroBar.Utilities
         {
             get => _showMultiMon;
             set => Set(ref _showMultiMon, value);
+        }
+
+        /// <summary>
+        /// When <see cref="ShowMultiMon"/> is false, this can be used to place the single taskbar on a specific monitor.
+        /// Value should be a Windows display device name (e.g. "\\\\.\\DISPLAY2").
+        /// If empty or not found, RetroBar will fall back to the primary screen.
+        /// </summary>
+        private string _taskbarMonitorDeviceName = null;
+        public string TaskbarMonitorDeviceName
+        {
+            get => _taskbarMonitorDeviceName;
+            set => Set(ref _taskbarMonitorDeviceName, value);
         }
 
         private bool _showQuickLaunch = true;
