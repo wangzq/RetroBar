@@ -1,15 +1,26 @@
 using ManagedShell;
 using ManagedShell.AppBar;
 using ManagedShell.Common.Logging;
+using ManagedShell.Interop;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using System.Windows.Threading;
 
 namespace RetroBar.Utilities
 {
     public class WindowManager : IDisposable
     {
         private static object reopenLock = new object();
+        private static readonly int WM_TASKBARCREATEDMESSAGE = NativeMethods.RegisterWindowMessage("TaskbarCreated");
+
+        // UIPI message filter constants
+        private const uint WM_COPYDATA = 0x004A;
+        private const uint MSGFLT_ALLOW = 1;
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool ChangeWindowMessageFilterEx(IntPtr hwnd, uint message, uint action, IntPtr pChangeFilterStruct);
 
         private bool _isSettingDisplays;
         private int _pendingDisplayEvents;
@@ -32,13 +43,53 @@ namespace RetroBar.Utilities
             _updater = updater;
             _hotkeyManager = hotkeyManager;
 
+            // Allow WM_COPYDATA messages from lower-privilege processes (UIPI bypass).
+            // This is needed when RetroBar runs elevated so non-admin apps can register tray icons.
+            AllowTrayMessages();
+
             _shellManager.ExplorerHelper.HideExplorerTaskbar = true;
 
             openTaskbars();
 
+            // Re-broadcast TaskbarCreated message after hiding Explorer's taskbar.
+            // This ensures apps register their tray icons with RetroBar, not Explorer.
+            // Use a delayed dispatch to allow Windows to fully process the tray handoff,
+            // which can vary based on process elevation and shell state.
+            DispatcherTimer delayTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
+            delayTimer.Tick += (s, e) =>
+            {
+                delayTimer.Stop();
+                SendTaskbarCreated();
+            };
+            delayTimer.Start();
+
             _explorerMonitor.ExplorerMonitorStart(this, _shellManager);
 
             Settings.Instance.PropertyChanged += Settings_PropertyChanged;
+        }
+
+        private void SendTaskbarCreated()
+        {
+            // Broadcast TaskbarCreated to all top-level windows so apps re-register their tray icons
+            NativeMethods.SendNotifyMessage(
+                (IntPtr)NativeMethods.HWND_BROADCAST,
+                (uint)WM_TASKBARCREATEDMESSAGE,
+                UIntPtr.Zero,
+                IntPtr.Zero);
+            ShellLogger.Debug("WindowManager: Sent TaskbarCreated message");
+        }
+
+        private void AllowTrayMessages()
+        {
+            // When running elevated, UIPI blocks WM_COPYDATA from non-elevated processes.
+            // Tray icons are registered via WM_COPYDATA, so we must allow this message
+            // on the tray window to receive icon registrations from non-admin apps.
+            IntPtr trayHandle = _shellManager.NotificationArea?.Handle ?? IntPtr.Zero;
+            if (trayHandle != IntPtr.Zero)
+            {
+                bool result = ChangeWindowMessageFilterEx(trayHandle, WM_COPYDATA, MSGFLT_ALLOW, IntPtr.Zero);
+                ShellLogger.Debug($"WindowManager: ChangeWindowMessageFilterEx for WM_COPYDATA on tray window: {result}");
+            }
         }
 
         private void Settings_PropertyChanged(object sender, System.ComponentModel.PropertyChangedEventArgs e)

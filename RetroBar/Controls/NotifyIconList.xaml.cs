@@ -70,7 +70,7 @@ namespace RetroBar.Controls
 
         private void SetNotificationAreaCollections()
         {
-            if (!_isLoaded && NotificationArea != null)
+            if (!_isLoaded && NotificationArea != null && IsLoaded)
             {
                 CompositeCollection allNotifyIcons = new CompositeCollection();
                 allNotifyIcons.Add(new CollectionContainer { Collection = NotificationArea.UnpinnedIcons });
@@ -84,6 +84,7 @@ namespace RetroBar.Controls
                 pinnedNotifyIconsSource = new CollectionViewSource { Source = pinnedNotifyIcons };
 
                 NotificationArea.UnpinnedIcons.CollectionChanged += UnpinnedIcons_CollectionChanged;
+                NotificationArea.PinnedIcons.CollectionChanged += PinnedIcons_CollectionChanged;
                 NotificationArea.NotificationBalloonShown += NotificationArea_NotificationBalloonShown;
 
                 Settings.Instance.PropertyChanged += Settings_PropertyChanged;
@@ -109,8 +110,11 @@ namespace RetroBar.Controls
 
         private static void NotificationAreaChangedCallback(DependencyObject sender, DependencyPropertyChangedEventArgs e)
         {
-            if (sender is NotifyIconList notifyIconList && e.OldValue == null && e.NewValue != null)
+            if (sender is NotifyIconList notifyIconList && e.NewValue != null)
             {
+                // Always try to initialize when NotificationArea becomes available,
+                // regardless of the old value. SetNotificationAreaCollections() has
+                // its own guard (_isLoaded) to prevent double initialization.
                 notifyIconList.SetNotificationAreaCollections();
             }
         }
@@ -188,6 +192,7 @@ namespace RetroBar.Controls
             if (NotificationArea != null)
             {
                 NotificationArea.UnpinnedIcons.CollectionChanged -= UnpinnedIcons_CollectionChanged;
+                NotificationArea.PinnedIcons.CollectionChanged -= PinnedIcons_CollectionChanged;
                 NotificationArea.NotificationBalloonShown -= NotificationArea_NotificationBalloonShown;
             }
 
@@ -197,6 +202,34 @@ namespace RetroBar.Controls
         private void UnpinnedIcons_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
         {
             SetToggleVisibility();
+            RefreshCollectionViews();
+        }
+
+        private void PinnedIcons_CollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+        {
+            RefreshCollectionViews();
+        }
+
+        private void RefreshCollectionViews()
+        {
+            // CompositeCollection with CollectionContainer doesn't automatically propagate
+            // changes from ICollectionView sources. Rebuild the collections to force update.
+            if (NotificationArea == null || !_isLoaded)
+            {
+                return;
+            }
+
+            // Rebuild all icons collection
+            CompositeCollection allNotifyIcons = new CompositeCollection();
+            allNotifyIcons.Add(new CollectionContainer { Collection = NotificationArea.UnpinnedIcons });
+            allNotifyIcons.Add(new CollectionContainer { Collection = NotificationArea.PinnedIcons });
+            allNotifyIconsSource.Source = allNotifyIcons;
+
+            // Rebuild pinned icons collection
+            CompositeCollection pinnedNotifyIcons = new CompositeCollection();
+            pinnedNotifyIcons.Add(new CollectionContainer { Collection = promotedIcons });
+            pinnedNotifyIcons.Add(new CollectionContainer { Collection = NotificationArea.PinnedIcons });
+            pinnedNotifyIconsSource.Source = pinnedNotifyIcons;
         }
 
         private void NotifyIconToggleButton_OnClick(object sender, RoutedEventArgs e)
