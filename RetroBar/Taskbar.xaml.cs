@@ -8,6 +8,7 @@ using RetroBar.Utilities;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -241,14 +242,27 @@ namespace RetroBar
             SetLayoutRounding();
             SetBlur(AllowsBlur());
             UpdateTrayPosition();
+            AllowCustomIconMessages();
+        }
+
+        [DllImport("user32.dll", SetLastError = true)]
+        private static extern bool ChangeWindowMessageFilterEx(IntPtr hwnd, uint message, uint action, IntPtr pChangeFilterStruct);
+
+        private void AllowCustomIconMessages()
+        {
+            // Allow WM_COPYDATA from non-elevated processes when RetroBar runs elevated
+            // This enables custom icon requests to work regardless of privilege level
+            const uint WM_COPYDATA = 0x004A;
+            const uint MSGFLT_ALLOW = 1;
+            ChangeWindowMessageFilterEx(Handle, WM_COPYDATA, MSGFLT_ALLOW, IntPtr.Zero);
         }
         
         protected override IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
         {
             base.WndProc(hwnd, msg, wParam, lParam, ref handled);
 
-            if ((msg == (int)NativeMethods.WM.SYSCOLORCHANGE || 
-                    msg == (int)NativeMethods.WM.SETTINGCHANGE) && 
+            if ((msg == (int)NativeMethods.WM.SYSCOLORCHANGE ||
+                    msg == (int)NativeMethods.WM.SETTINGCHANGE) &&
                 Settings.Instance.Theme.StartsWith(DictionaryManager.THEME_DEFAULT))
             {
                 handled = true;
@@ -259,6 +273,15 @@ namespace RetroBar
             else if (msg == (int)NativeMethods.WM.SETTINGCHANGE && wParam == (IntPtr)NativeMethods.SPI.SETWORKAREA && Settings.Instance.ShowMultiMon)
             {
                 windowManager.NotifyWorkAreaChange();
+            }
+            else if (msg == 0x004A) // WM_COPYDATA
+            {
+                // Handle custom icon requests from external applications
+                if (CustomIconManager.Instance.ProcessCopyData(lParam))
+                {
+                    handled = true;
+                    return (IntPtr)1; // Return success
+                }
             }
 
             return IntPtr.Zero;

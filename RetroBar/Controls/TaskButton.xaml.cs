@@ -5,6 +5,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using System.Windows.Media.Animation;
 using ManagedShell.Common.Helpers;
 using ManagedShell.Interop;
@@ -17,7 +18,7 @@ namespace RetroBar.Controls
     /// <summary>
     /// Interaction logic for TaskButton.xaml
     /// </summary>
-    public partial class TaskButton : UserControl
+    public partial class TaskButton : UserControl, INotifyPropertyChanged
     {
         public static DependencyProperty HostProperty = DependencyProperty.Register(nameof(Host), typeof(TaskList), typeof(TaskButton));
 
@@ -33,6 +34,34 @@ namespace RetroBar.Controls
 
         private DelayedActivationHandler dragHandler;
         private bool _isLoaded;
+
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        /// <summary>
+        /// Gets the effective icon for this task button (custom icon if set, otherwise default).
+        /// </summary>
+        public ImageSource EffectiveIcon
+        {
+            get
+            {
+                if (Window == null) return null;
+                var customIcon = CustomIconManager.Instance.GetCustomIcon(Window.Handle);
+                return customIcon ?? Window.Icon;
+            }
+        }
+
+        /// <summary>
+        /// Gets the effective overlay icon for this task button (custom overlay if set, otherwise default).
+        /// </summary>
+        public ImageSource EffectiveOverlayIcon
+        {
+            get
+            {
+                if (Window == null) return null;
+                var customOverlay = CustomIconManager.Instance.GetCustomOverlay(Window.Handle);
+                return customOverlay ?? Window.OverlayIcon;
+            }
+        }
 
         public TaskButton()
         {
@@ -88,6 +117,7 @@ namespace RetroBar.Controls
             Window = DataContext as ApplicationWindow;
 
             Settings.Instance.PropertyChanged += Settings_PropertyChanged;
+            CustomIconManager.Instance.IconUpdated += CustomIconManager_IconUpdated;
 
             dragHandler = new DelayedActivationHandler(() =>
             {
@@ -106,6 +136,54 @@ namespace RetroBar.Controls
             }
 
             _isLoaded = true;
+
+            // Check if there's already a custom icon set for this window
+            if (Window != null && CustomIconManager.Instance.HasCustomIcon(Window.Handle))
+            {
+                NotifyIconChanged();
+            }
+        }
+
+        private void CustomIconManager_IconUpdated(object sender, IntPtr hwnd)
+        {
+            if (Window != null && Window.Handle == hwnd)
+            {
+                Dispatcher.BeginInvoke(new Action(() => NotifyIconChanged()));
+            }
+        }
+
+        private void NotifyIconChanged()
+        {
+            if (Window == null) return;
+
+            // Get custom icons for this window
+            var customIcon = CustomIconManager.Instance.GetCustomIcon(Window.Handle);
+            var customOverlay = CustomIconManager.Instance.GetCustomOverlay(Window.Handle);
+
+            if (customIcon != null)
+            {
+                TaskIconImage.Source = customIcon;
+            }
+            else
+            {
+                // Restore the binding to the default icon
+                TaskIconImage.SetBinding(System.Windows.Controls.Image.SourceProperty,
+                    new Binding("Icon") { Mode = BindingMode.OneWay });
+            }
+
+            if (customOverlay != null)
+            {
+                TaskOverlayImage.Source = customOverlay;
+            }
+            else
+            {
+                // Restore the binding to the default overlay
+                TaskOverlayImage.SetBinding(System.Windows.Controls.Image.SourceProperty,
+                    new Binding("OverlayIcon") { Mode = BindingMode.OneWay });
+            }
+
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EffectiveIcon)));
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(EffectiveOverlayIcon)));
         }
 
         private void Window_GetButtonRect(ref NativeMethods.ShortRect rect)
@@ -130,6 +208,11 @@ namespace RetroBar.Controls
             {
                 ScrollIntoView();
             }
+            else if (e.PropertyName == "Icon" || e.PropertyName == "OverlayIcon")
+            {
+                // Refresh effective icons when default icons change
+                NotifyIconChanged();
+            }
         }
 
         private void TaskButton_OnUnloaded(object sender, RoutedEventArgs e)
@@ -140,6 +223,7 @@ namespace RetroBar.Controls
             }
 
             Settings.Instance.PropertyChanged -= Settings_PropertyChanged;
+            CustomIconManager.Instance.IconUpdated -= CustomIconManager_IconUpdated;
             dragHandler?.Dispose();
 
             if (Window != null)
