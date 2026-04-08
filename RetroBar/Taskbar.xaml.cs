@@ -457,6 +457,14 @@ namespace RetroBar
             StartButton?.UpdateFloatingStartCoordinates();
         }
 
+        private void TrayGroupBox_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            if (Settings.Instance.AutoSize && Orientation == Orientation.Vertical && !_isAdjustingAutoSize)
+            {
+                Dispatcher.BeginInvoke(new Action(AdjustVerticalAutoSize), DispatcherPriority.Loaded);
+            }
+        }
+
         private void Taskbar_Deactivated(object sender, EventArgs e)
         {
             if (AppBarMode != AppBarMode.AutoHide)
