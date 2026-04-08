@@ -393,16 +393,10 @@ namespace RetroBar
                 return;
             }
 
-            if (Settings.Instance.ShowMultiMon)
-            {
-                // Re-create RetroBar windows based on new screen setup
-                windowManager.NotifyDisplayChange(reason);
-            }
-            else
-            {
-                // Update window as necessary
-                base.SetScreenProperties(reason);
-            }
+            // Let WindowManager re-create taskbars based on new screen setup.
+            // In single taskbar mode this ensures the taskbar falls back to the
+            // primary monitor when the configured monitor is disconnected.
+            windowManager.NotifyDisplayChange(reason);
         }
 
         protected override bool ShouldAllowAutoHide()

@@ -2,6 +2,7 @@ using ManagedShell;
 using ManagedShell.AppBar;
 using ManagedShell.Common.Logging;
 using ManagedShell.Interop;
+using Microsoft.Win32;
 using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
@@ -65,6 +66,7 @@ namespace RetroBar.Utilities
 
             _explorerMonitor.ExplorerMonitorStart(this, _shellManager);
 
+            SystemEvents.DisplaySettingsChanged += SystemEvents_DisplaySettingsChanged;
             Settings.Instance.PropertyChanged += Settings_PropertyChanged;
         }
 
@@ -270,8 +272,15 @@ namespace RetroBar.Utilities
             fi.SetValue(null, null);
         }
 
+        private void SystemEvents_DisplaySettingsChanged(object sender, EventArgs e)
+        {
+            ShellLogger.Debug("WindowManager: SystemEvents.DisplaySettingsChanged fired");
+            handleDisplayChange();
+        }
+
         public void Dispose()
         {
+            SystemEvents.DisplaySettingsChanged -= SystemEvents_DisplaySettingsChanged;
             _shellManager.ExplorerHelper.HideExplorerTaskbar = false;
             Settings.Instance.PropertyChanged -= Settings_PropertyChanged;
         }
