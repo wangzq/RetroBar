@@ -281,6 +281,13 @@ namespace RetroBar.Utilities
             set => Set(ref _debugLogging, value);
         }
 
+        private bool _autoSize = false;
+        public bool AutoSize
+        {
+            get => _autoSize;
+            set => Set(ref _autoSize, value);
+        }
+
         private bool _autoHide = false;
         public bool AutoHide
         {

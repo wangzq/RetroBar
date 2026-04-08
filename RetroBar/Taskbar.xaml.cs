@@ -12,6 +12,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 using Application = System.Windows.Application;
 
 namespace RetroBar
@@ -26,11 +27,13 @@ namespace RetroBar
         public bool IsScaled => DpiScale > 1 || Settings.Instance.TaskbarScale > 1;
 
         private double _unlockedMargin;
+        private int _autoSizeValue = 1;
+        private bool _isAdjustingAutoSize;
         public double DesiredRowHeight { get; private set; }
 
         public int Rows
         {
-            get => Settings.Instance.RowCount;
+            get => Settings.Instance.AutoSize ? _autoSizeValue : Settings.Instance.RowCount;
             set => Settings.Instance.RowCount = value;
         }
 
@@ -208,6 +211,10 @@ namespace RetroBar
                 OnPropertyChanged(nameof(IsLocked));
                 PeekDuringAutoHide();
                 RecalculateSize();
+                if (Settings.Instance.AutoSize && Orientation == Orientation.Vertical)
+                {
+                    Dispatcher.BeginInvoke(new Action(AdjustVerticalAutoSize), DispatcherPriority.Loaded);
+                }
             }
             else if (e.PropertyName == nameof(Settings.RowCount))
             {
@@ -219,6 +226,18 @@ namespace RetroBar
             {
                 PeekDuringAutoHide();
                 RecalculateSize();
+            }
+            else if (e.PropertyName == nameof(Settings.AutoSize))
+            {
+                PeekDuringAutoHide();
+                RecalculateSize();
+                OnPropertyChanged(nameof(Rows));
+                // When turning off auto-size on vertical, force restore to full height.
+                // RecalculateSize may not trigger UpdatePosition if width didn't change.
+                if (!Settings.Instance.AutoSize && Orientation == Orientation.Vertical)
+                {
+                    UpdatePosition();
+                }
             }
             else if (e.PropertyName == nameof(Settings.ShowStartButtonMultiMon))
             {
@@ -261,6 +280,14 @@ namespace RetroBar
         {
             base.WndProc(hwnd, msg, wParam, lParam, ref handled);
 
+            // After the base handles WM_WINDOWPOSCHANGED (including ABN_POSCHANGED -> ABSetPos
+            // and the "unexpected move" handler), re-apply compact vertical size.
+            if (msg == 71 && Settings.Instance.AutoSize && Orientation == Orientation.Vertical
+                && !_isAdjustingAutoSize && IsLoaded)
+            {
+                Dispatcher.BeginInvoke(new Action(AdjustVerticalAutoSize), DispatcherPriority.Loaded);
+            }
+
             if ((msg == (int)NativeMethods.WM.SYSCOLORCHANGE ||
                     msg == (int)NativeMethods.WM.SETTINGCHANGE) &&
                 Settings.Instance.Theme.StartsWith(DictionaryManager.THEME_DEFAULT))
@@ -285,6 +312,63 @@ namespace RetroBar
             }
 
             return IntPtr.Zero;
+        }
+
+        public override bool UpdatePosition()
+        {
+            bool result = base.UpdatePosition();
+            if (Settings.Instance.AutoSize && Orientation == Orientation.Vertical)
+            {
+                Dispatcher.BeginInvoke(new Action(AdjustVerticalAutoSize), DispatcherPriority.Loaded);
+            }
+            return result;
+        }
+
+        /// <summary>
+        /// For vertical auto-size: adjust the window height to fit content.
+        /// The AppBar reservation remains full-height, but the visible window is compact.
+        /// </summary>
+        public void AdjustVerticalAutoSize()
+        {
+            if (!Settings.Instance.AutoSize || Orientation != Orientation.Vertical)
+                return;
+
+            if (!IsLoaded || TaskListControl == null)
+                return;
+
+            // Let WPF calculate total desired height with unlimited vertical space.
+            // DesiredSize includes LayoutTransform, so it's in window logical pixels
+            // and automatically accounts for all elements (start, tray, task buttons, etc.).
+            double currentWidth = TaskbarContentControl.ActualWidth;
+            if (currentWidth <= 0) return;
+
+            TaskbarContentControl.Measure(new Size(currentWidth, double.PositiveInfinity));
+            double desiredLogical = TaskbarContentControl.DesiredSize.Height;
+            TaskbarContentControl.InvalidateMeasure();
+
+            double padding = 16 * Settings.Instance.TaskbarScale;
+            desiredLogical += padding;
+
+            double screenPhysicalHeight = Screen.Bounds.Bottom - Screen.Bounds.Top;
+            double maxLogical = screenPhysicalHeight / DpiScale;
+            double minLogical = Math.Max(DesiredWidth, 80);
+
+            desiredLogical = Math.Max(minLogical, Math.Min(desiredLogical, maxLogical));
+
+            int desiredPhysical = (int)(desiredLogical * DpiScale);
+            NativeMethods.Rect rect = WindowRect;
+            int currentHeight = rect.Bottom - rect.Top;
+
+            if (Math.Abs(desiredPhysical - currentHeight) < 2) return;
+
+            // Center vertically on the screen
+            int screenMid = (Screen.Bounds.Top + Screen.Bounds.Bottom) / 2;
+            rect.Top = screenMid - desiredPhysical / 2;
+            rect.Bottom = rect.Top + desiredPhysical;
+
+            _isAdjustingAutoSize = true;
+            SetWindowPosition(rect);
+            _isAdjustingAutoSize = false;
         }
 
         protected override void CustomClosing()
@@ -438,11 +522,22 @@ namespace RetroBar
         }
         #endregion
 
+        public void SetAutoSizeValue(int value)
+        {
+            if (_autoSizeValue != value)
+            {
+                _autoSizeValue = value;
+                RecalculateSize();
+                OnPropertyChanged(nameof(Rows));
+            }
+        }
+
         private void RecalculateSize(bool performResize = true)
         {
             _unlockedMargin = Settings.Instance.TaskbarScale * (Application.Current.FindResource("TaskbarUnlockedSize") as double? ?? 0);
             DesiredRowHeight = Settings.Instance.TaskbarScale * (Application.Current.FindResource("TaskbarRowHeight") as double? ?? 0);
-            double newWidth = (Settings.Instance.TaskbarScale * (Application.Current.FindResource("TaskbarWidth") as double? ?? 0)) + DesiredRowHeight * (Settings.Instance.TaskbarWidth - 1);
+            int effectiveTaskbarWidth = Settings.Instance.AutoSize ? _autoSizeValue : Settings.Instance.TaskbarWidth;
+            double newWidth = (Settings.Instance.TaskbarScale * (Application.Current.FindResource("TaskbarWidth") as double? ?? 0)) + DesiredRowHeight * (effectiveTaskbarWidth - 1);
             double newHeight = (Settings.Instance.TaskbarScale * (Application.Current.FindResource("TaskbarHeight") as double? ?? 0)) + DesiredRowHeight * (Rows - 1);
 
             if (AppBarMode == AppBarMode.AutoHide || !Settings.Instance.LockTaskbar)

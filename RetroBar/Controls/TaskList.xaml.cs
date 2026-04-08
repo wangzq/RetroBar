@@ -6,6 +6,7 @@ using System;
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 
 namespace RetroBar.Controls
 {
@@ -117,6 +118,14 @@ namespace RetroBar.Controls
                     taskbarItems?.Refresh();
                 }
             }
+            else if (e.PropertyName == nameof(Settings.AutoSize))
+            {
+                if (Settings.Instance.AutoSize)
+                {
+                    UpdateAutoSize();
+                    Dispatcher.BeginInvoke(new Action(() => Host?.AdjustVerticalAutoSize()), DispatcherPriority.Loaded);
+                }
+            }
         }
         private void TaskList_TaskbarHotkeyPressed(object sender, HotkeyManager.TaskbarHotkeyEventArgs e)
         {
@@ -209,11 +218,17 @@ namespace RetroBar.Controls
         private void GroupedWindows_CollectionChanged(object sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
         {
             SetTaskButtonWidth();
+            UpdateAutoSize();
+            if (Settings.Instance.AutoSize && Host != null)
+            {
+                Dispatcher.BeginInvoke(new Action(() => Host?.AdjustVerticalAutoSize()), DispatcherPriority.Loaded);
+            }
         }
 
         private void TaskList_OnSizeChanged(object sender, SizeChangedEventArgs e)
         {
             SetTaskButtonWidth();
+            UpdateAutoSize();
         }
 
         private void SetTaskButtonWidth()
@@ -253,6 +268,92 @@ namespace RetroBar.Controls
                 SetScrollable(false);
             }
         }
+
+        private void UpdateAutoSize()
+        {
+            if (!Settings.Instance.AutoSize || Host == null)
+                return;
+
+            int taskCount = TasksList.Items.Count;
+
+            if (taskCount == 0)
+            {
+                Host.SetAutoSizeValue(1);
+                return;
+            }
+
+            if (Settings.Instance.Edge == AppBarEdge.Left || Settings.Instance.Edge == AppBarEdge.Right)
+            {
+                // Vertical: calculate columns needed based on full screen height.
+                // Using screen height (stable) instead of viewport height prevents a
+                // feedback loop when AdjustVerticalAutoSize shrinks the window.
+                double buttonHeight = Host.DesiredRowHeight;
+                if (buttonHeight <= 0) return;
+
+                Thickness verticalMargin = Application.Current.FindResource("TaskButtonVerticalMargin") as Thickness? ?? new Thickness();
+                double totalButtonHeight = buttonHeight + verticalMargin.Top + verticalMargin.Bottom;
+
+                double nonTaskOverhead = Host.ActualHeight - TasksScrollViewer.ActualHeight;
+                double screenLogicalHeight = (Host.Screen.Bounds.Bottom - Host.Screen.Bounds.Top) / Host.DpiScale;
+                double availableHeight = screenLogicalHeight - nonTaskOverhead;
+                if (availableHeight <= 0) return;
+
+                int buttonsPerColumn = Math.Max(1, (int)Math.Floor(availableHeight / totalButtonHeight));
+                int columnsNeeded = (int)Math.Ceiling((double)taskCount / buttonsPerColumn);
+                columnsNeeded = Math.Max(1, Math.Min(columnsNeeded, Settings.Instance.TaskbarWidthLimit));
+                Host.SetAutoSizeValue(columnsNeeded);
+            }
+            else
+            {
+                // Horizontal: calculate rows needed
+                double buttonWidth = DefaultButtonWidth + TaskButtonLeftMargin + TaskButtonRightMargin;
+                if (buttonWidth <= 0) return;
+
+                double availableWidth = TasksScrollViewer.ActualWidth;
+                if (availableWidth <= 0) return;
+
+                int buttonsPerRow = Math.Max(1, (int)Math.Floor(availableWidth / buttonWidth));
+                int rowsNeeded = (int)Math.Ceiling((double)taskCount / buttonsPerRow);
+                rowsNeeded = Math.Max(1, Math.Min(rowsNeeded, Settings.Instance.RowLimit));
+                Host.SetAutoSizeValue(rowsNeeded);
+            }
+        }
+
+        /// <summary>
+        /// Returns the total height of task button content in pre-scale pixels.
+        /// </summary>
+        public double GetContentHeight()
+        {
+            int taskCount = TasksList.Items.Count;
+            if (taskCount == 0) return 0;
+
+            double total = 0;
+            int measured = 0;
+            for (int i = 0; i < taskCount; i++)
+            {
+                var container = TasksList.ItemContainerGenerator.ContainerFromIndex(i) as FrameworkElement;
+                if (container != null && container.ActualHeight > 0)
+                {
+                    total += container.ActualHeight + container.Margin.Top + container.Margin.Bottom;
+                    measured++;
+                }
+            }
+
+            if (measured == 0)
+            {
+                double rowHeight = Application.Current.FindResource("TaskbarRowHeight") as double? ?? 25;
+                return taskCount * rowHeight;
+            }
+
+            if (measured < taskCount)
+            {
+                total = total / measured * taskCount;
+            }
+
+            return total;
+        }
+
+        public double GetViewportHeight() => TasksScrollViewer.ActualHeight;
 
         private void SetScrollable(bool canScroll)
         {
